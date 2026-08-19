@@ -73,8 +73,8 @@ export default function SalesRepsPage() {
   function estimatedCommission(rep) {
     const revRow = rev.find(r => r.rep_id === rep.rep_id);
     const revenue = Number(revRow?.revenue || 0);
-    const subs = Number(revRow?.transactions || 0);
-    if (rep.commission_type === 'flat') return (rep.commission_value || 0) * subs;
+    const count = Number(revRow?.transactions || 0);
+    if (rep.commission_type === 'flat') return (rep.commission_value || 0) * count;
     return revenue * ((rep.commission_value || 0) / 100);
   }
 
