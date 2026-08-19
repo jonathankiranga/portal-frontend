@@ -67,6 +67,21 @@ export async function getSalesReps() {
   return data;
 }
 
+export async function createSalesRep(body) {
+  const { data } = await api.post('/admin/api/sales-reps', body, { timeout: 30000 });
+  return data;
+}
+
+export async function updateSalesRep(repId, body) {
+  const { data } = await api.put(`/admin/api/sales-reps/${repId}`, body, { timeout: 30000 });
+  return data;
+}
+
+export async function deleteSalesRep(repId) {
+  const { data } = await api.delete(`/admin/api/sales-reps/${repId}`);
+  return data;
+}
+
 export async function getAppSettings() {
   const { data } = await api.get('/admin/api/settings');
   return data;

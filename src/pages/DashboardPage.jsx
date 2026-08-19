@@ -23,11 +23,11 @@ export default function DashboardPage() {
 
   const cards = stats ? [
     { label: 'Schools', value: stats.schools, to: '/schools' },
-    { label: 'Teachers', value: stats.teachers, to: '/schools' },
+    { label: 'Premium parents', value: stats.premium_parents, to: '/revenue' },
+    { label: 'Premium subs', value: stats.premium_subscriptions, to: '/revenue' },
+    { label: 'Premium revenue (KSh)', value: Number(stats.revenue || 0).toLocaleString(), to: '/revenue' },
     { label: 'Students', value: stats.students, to: '/schools' },
-    { label: 'Parents', value: stats.parents, to: '/schools' },
-    { label: 'Payments', value: stats.payments, to: '/revenue' },
-    { label: 'Revenue (KSh)', value: Number(stats.revenue || 0).toLocaleString(), to: '/revenue' },
+    { label: 'Teachers', value: stats.teachers, to: '/schools' },
   ] : [];
 
   return (
@@ -63,9 +63,9 @@ export default function DashboardPage() {
               </div>
             </Link>
             <Link to="/revenue" className="card p-5 hover:shadow-card-hover">
-              <div className="font-semibold mb-2">Revenue</div>
+              <div className="font-semibold mb-2">Premium Revenue</div>
               <div className="text-sm" style={{ color: '#777' }}>
-                Collections by month, payment method, and sales representative.
+                Premium subscription collections by month and sales rep (school fees are handled by the headteacher and bursar).
               </div>
             </Link>
           </div>

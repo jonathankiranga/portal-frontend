@@ -2,8 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { getSchoolDetails, deleteSchool } from '../utils/api.js';
 
-const TERM_COLORS = { 'Term 1': '#7B4F9B', 'Term 2': '#1565C0', 'Term 3': '#E65100' };
-
 export default function SchoolDetailPage() {
   const { schoolId } = useParams();
   const navigate = useNavigate();
@@ -48,7 +46,7 @@ export default function SchoolDetailPage() {
     </div>
   );
 
-  const { school, classes, learning_areas, fees, teachers, students, payment_summary } = data;
+  const { school, classes, learning_areas, teachers, students, payment_summary } = data;
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-6">
@@ -75,36 +73,13 @@ export default function SchoolDetailPage() {
         </select>
       </div>
 
-      {/* Payments across terms */}
-      <h2 className="font-semibold mb-3">Payments across terms — {year}</h2>
-      <div className="grid md:grid-cols-3 gap-4 mb-8">
-        {payment_summary.terms.map(t => {
-          const rate = Math.min(100, t.collection_rate || 0);
-          return (
-            <div key={t.term} className="card p-5">
-              <div className="flex items-center justify-between mb-3">
-                <span className="badge" style={{ backgroundColor: TERM_COLORS[t.term] + '1A', color: TERM_COLORS[t.term] }}>{t.term}</span>
-                <span className="text-xs" style={{ color: '#999' }}>{t.transactions} txns</span>
-              </div>
-              <div className="text-2xl font-bold">KSh {Number(t.paid || 0).toLocaleString()}</div>
-              <div className="text-sm" style={{ color: '#888' }}>collected of KSh {Number(t.expected || 0).toLocaleString()}</div>
-              <div className="mt-3 h-2 rounded-full overflow-hidden" style={{ backgroundColor: '#EEE' }}>
-                <div className="h-full" style={{ width: `${rate}%`, backgroundColor: TERM_COLORS[t.term] }} />
-              </div>
-              <div className="mt-2 text-xs font-medium" style={{ color: t.outstanding > 0 ? '#C62828' : '#2E7D32' }}>
-                {t.outstanding > 0 ? `KSh ${Number(t.outstanding).toLocaleString()} outstanding` : 'Fully collected'}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Who paid / not paid */}
-      <h2 className="font-semibold mb-3">Parents — who has paid / not paid</h2>
+      {/* Who paid premium */}
+      <h2 className="font-semibold mb-1">Parents — who paid premium</h2>
+      <p className="text-sm mb-3" style={{ color: '#888' }}>Premium subscription revenue ({year}) — per active parent at this school, not school fees</p>
       <div className="card overflow-hidden mb-8">
         <div className="flex gap-4 px-5 py-3 text-sm" style={{ backgroundColor: '#FAFAFA', borderBottom: '1px solid #EEE' }}>
-          <span><b>{payment_summary.paid_parents}</b> paid</span>
-          <span style={{ color: '#C62828' }}><b>{payment_summary.total_parents - payment_summary.paid_parents}</b> not paid</span>
+          <span style={{ color: '#2E7D32' }}><b>{payment_summary.paid_parents}</b> premium</span>
+          <span style={{ color: '#C62828' }}><b>{payment_summary.total_parents - payment_summary.paid_parents}</b> not premium</span>
           <span style={{ color: '#888' }}><b>{payment_summary.total_parents}</b> total</span>
         </div>
         <div className="table-wrap">
@@ -114,7 +89,8 @@ export default function SchoolDetailPage() {
                 <th>Parent</th>
                 <th>Phone</th>
                 <th>Children</th>
-                <th>Status</th>
+                <th>Premium</th>
+                <th>Premium till</th>
               </tr>
             </thead>
             <tbody>
@@ -124,14 +100,17 @@ export default function SchoolDetailPage() {
                   <td className="font-mono text-xs">{p.parent_phone}</td>
                   <td>{p.child_count}</td>
                   <td>
-                    {p.paid
-                      ? <span className="badge-paid">Paid</span>
-                      : <span className="badge-unpaid">Not paid</span>}
+                    {p.premium
+                      ? <span className="badge-paid">Premium {p.paid_terms && p.paid_terms.length ? `· ${p.paid_terms.join(', ')}` : ''}</span>
+                      : <span className="badge-unpaid">Not premium {p.amount_due > 0 ? `· KSh ${Number(p.amount_due).toLocaleString()}` : ''}</span>}
+                  </td>
+                  <td className="text-xs" style={{ color: '#888' }}>
+                    {p.premium_expires_at ? new Date(p.premium_expires_at).toLocaleDateString() : '—'}
                   </td>
                 </tr>
               ))}
               {payment_summary.parents.length === 0 && (
-                <tr><td colSpan="4" className="text-center py-6" style={{ color: '#999' }}>No parents linked yet — students must be imported first.</td></tr>
+                <tr><td colSpan="5" className="text-center py-6" style={{ color: '#999' }}>No parents linked yet — students must be imported first.</td></tr>
               )}
             </tbody>
           </table>
@@ -139,31 +118,6 @@ export default function SchoolDetailPage() {
       </div>
 
       <div className="grid lg:grid-cols-2 gap-4">
-        {/* Fee structures */}
-        <div className="card p-5">
-          <h3 className="font-semibold mb-3">Fee structures — {year}</h3>
-          <div className="table-wrap">
-            <table className="data-table">
-              <thead>
-                <tr><th>Name</th><th>Term</th><th>Amount</th><th>Optional</th></tr>
-              </thead>
-              <tbody>
-                {fees.map(f => (
-                  <tr key={f.fee_id}>
-                    <td className="font-medium">{f.fee_name}</td>
-                    <td><span className="badge" style={{ backgroundColor: TERM_COLORS[f.term] + '1A', color: TERM_COLORS[f.term] }}>{f.term}</span></td>
-                    <td>KSh {Number(f.amount).toLocaleString()}</td>
-                    <td>{f.is_optional ? 'Yes' : 'No'}</td>
-                  </tr>
-                ))}
-                {fees.length === 0 && (
-                  <tr><td colSpan="4" className="text-center py-6" style={{ color: '#999' }}>No fee structures for this year.</td></tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
         {/* Classes */}
         <div className="card p-5">
           <h3 className="font-semibold mb-3">Classes</h3>
