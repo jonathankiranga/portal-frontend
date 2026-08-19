@@ -2,7 +2,7 @@ import axios from 'axios';
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'https://sms-backend-r0tn.onrender.com',
-  timeout: 20000,
+  timeout: 60000,
   headers: { 'Content-Type': 'application/json' }
 });
 
@@ -38,7 +38,7 @@ export async function getSchoolDetails(schoolId, year) {
 }
 
 export async function setupSchool(body) {
-  const { data } = await api.post('/admin/api/schools/setup', body);
+  const { data } = await api.post('/admin/api/schools/setup', body, { timeout: 120000 });
   return data;
 }
 
