@@ -107,4 +107,68 @@ export async function deleteFee(feeId) {
   return data;
 }
 
+// Classes
+export async function addClass(schoolId, body) {
+  const { data } = await api.post(`/admin/api/schools/${schoolId}/classes`, body, { timeout: 30000 });
+  return data;
+}
+
+export async function updateClass(classId, body) {
+  const { data } = await api.put(`/admin/api/classes/${classId}`, body, { timeout: 30000 });
+  return data;
+}
+
+export async function deleteClass(classId) {
+  const { data } = await api.delete(`/admin/api/classes/${classId}`, { timeout: 60000 });
+  return data;
+}
+
+// Learning areas
+export async function addLearningArea(schoolId, body) {
+  const { data } = await api.post(`/admin/api/schools/${schoolId}/learning-areas`, body, { timeout: 30000 });
+  return data;
+}
+
+export async function updateLearningArea(areaId, body) {
+  const { data } = await api.put(`/admin/api/learning-areas/${areaId}`, body, { timeout: 30000 });
+  return data;
+}
+
+export async function deleteLearningArea(areaId) {
+  const { data } = await api.delete(`/admin/api/learning-areas/${areaId}`, { timeout: 30000 });
+  return data;
+}
+
+// Sub-learning-areas
+export async function addSubArea(body) {
+  const { data } = await api.post('/admin/api/sub-learning-areas', body, { timeout: 30000 });
+  return data;
+}
+
+export async function updateSubArea(subId, body) {
+  const { data } = await api.put(`/admin/api/sub-learning-areas/${subId}`, body, { timeout: 30000 });
+  return data;
+}
+
+export async function deleteSubArea(subId) {
+  const { data } = await api.delete(`/admin/api/sub-learning-areas/${subId}`, { timeout: 30000 });
+  return data;
+}
+
+// Teachers
+export async function addTeacher(schoolId, body) {
+  const { data } = await api.post(`/admin/api/teachers`, { ...body, school_id: schoolId }, { timeout: 30000 });
+  return data;
+}
+
+export async function updateTeacher(teacherId, body) {
+  const { data } = await api.put(`/admin/api/teachers/${teacherId}`, body, { timeout: 30000 });
+  return data;
+}
+
+export async function deleteTeacher(teacherId) {
+  const { data } = await api.delete(`/admin/api/teachers/${teacherId}`, { timeout: 30000 });
+  return data;
+}
+
 export default api;

@@ -1,6 +1,31 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { getSchoolDetails, deleteSchool } from '../utils/api.js';
+import {
+  getSchoolDetails, deleteSchool,
+  addClass, updateClass, deleteClass,
+  addLearningArea, updateLearningArea, deleteLearningArea,
+  addSubArea, updateSubArea, deleteSubArea,
+  addTeacher, updateTeacher, deleteTeacher
+} from '../utils/api.js';
+
+function EditableName({ value, onSave, onCancel, placeholder }) {
+  const [editing, setEditing] = useState(false);
+  const [val, setVal] = useState(value);
+  if (!editing) {
+    return (
+      <button onClick={() => { setVal(value); setEditing(true); }} className="hover:underline" style={{ color: 'inherit' }}>
+        {value || placeholder}
+      </button>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1">
+      <input autoFocus value={val} onChange={e => setVal(e.target.value)} className="input-field !py-1 !w-40" />
+      <button type="button" onClick={() => { onSave(val); setEditing(false); }} className="btn-primary !w-auto !px-2 !py-1 text-xs">Save</button>
+      <button type="button" onClick={() => { setEditing(false); onCancel && onCancel(); }} className="btn-secondary !w-auto !px-2 !py-1 text-xs">X</button>
+    </span>
+  );
+}
 
 export default function SchoolDetailPage() {
   const { schoolId } = useParams();
@@ -8,8 +33,16 @@ export default function SchoolDetailPage() {
   const [data, setData] = useState(null);
   const [year, setYear] = useState(new Date().getFullYear());
   const [error, setError] = useState('');
+  const [flash, setFlash] = useState('');
   const [loading, setLoading] = useState(true);
   const [confirmDelete, setConfirmDelete] = useState(false);
+
+  const [newClassName, setNewClassName] = useState('');
+  const [newAreas, setNewAreas] = useState({});
+  const [expandedArea, setExpandedArea] = useState(null);
+  const [newSubArea, setNewSubArea] = useState({});
+  const [newTeacher, setNewTeacher] = useState({ full_name: '', phone: '', email: '', role: 'teacher' });
+  const [editingTeacher, setEditingTeacher] = useState(null);
 
   useEffect(() => { load(); }, [schoolId, year]);
 
@@ -25,9 +58,20 @@ export default function SchoolDetailPage() {
     setLoading(false);
   }
 
+  async function run(fn, successMsg) {
+    setError('');
+    setFlash('');
+    try {
+      await fn();
+      setFlash(successMsg);
+      await load();
+    } catch (err) {
+      setError(err.response?.data?.error || 'Action failed');
+    }
+  }
+
   async function handleDelete() {
     if (!confirmDelete) { setConfirmDelete(true); return; }
-    setError('');
     try {
       await deleteSchool(schoolId);
       navigate('/schools');
@@ -46,7 +90,10 @@ export default function SchoolDetailPage() {
     </div>
   );
 
-  const { school, classes, learning_areas, teachers, students, payment_summary } = data;
+  const { school, classes, learning_areas, sub_learning_areas, teachers, students, payment_summary } = data;
+  const levels = [...new Set(learning_areas.map(a => a.level_name))];
+  const subsByArea = {};
+  (sub_learning_areas || []).forEach(s => { (subsByArea[s.area_id] = subsByArea[s.area_id] || []).push(s); });
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-6">
@@ -64,8 +111,8 @@ export default function SchoolDetailPage() {
       </div>
 
       {error && <div className="mb-4 p-3 rounded-lg text-sm" style={{ backgroundColor: '#FFEBEE', color: '#C62828' }}>{error}</div>}
+      {flash && <div className="mb-4 p-3 rounded-lg text-sm" style={{ backgroundColor: '#E8F5E9', color: '#2E7D32' }}>{flash}</div>}
 
-      {/* Year selector */}
       <div className="flex items-center gap-3 mb-6">
         <label className="text-sm" style={{ color: '#555' }}>Academic year</label>
         <select value={year} onChange={e => setYear(parseInt(e.target.value))} className="input-field !w-36 !py-2">
@@ -117,34 +164,163 @@ export default function SchoolDetailPage() {
         </div>
       </div>
 
-      <div className="grid lg:grid-cols-2 gap-4">
-        {/* Classes */}
-        <div className="card p-5">
-          <h3 className="font-semibold mb-3">Classes</h3>
-          <div className="flex flex-wrap gap-2">
-            {classes.map(c => (
-              <span key={c.class_id} className="badge-purple !px-3 !py-1.5">{c.class_name}</span>
-            ))}
-            {classes.length === 0 && <span style={{ color: '#999' }}>No classes</span>}
-          </div>
+      {/* Classes CRUD */}
+      <div className="card p-5 mb-8">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="font-semibold">Classes ({classes.length})</h3>
+          <span className="text-xs" style={{ color: '#999' }}>Click a class name to rename · Delete removes its students & data</span>
         </div>
+        <div className="flex flex-wrap gap-2 mb-4">
+          {classes.map(c => (
+            <span key={c.class_id} className="inline-flex items-center gap-2 badge-purple !px-3 !py-1.5">
+              <EditableName value={c.class_name} onSave={name => name.trim() && run(() => updateClass(c.class_id, { class_name: name.trim() }), 'Class renamed')} />
+              <button onClick={() => run(() => deleteClass(c.class_id), 'Class deleted')} className="text-xs font-bold" style={{ color: '#C62828' }} title="Delete class">×</button>
+            </span>
+          ))}
+          {classes.length === 0 && <span style={{ color: '#999' }}>No classes</span>}
+        </div>
+        <form onSubmit={e => { e.preventDefault(); if (newClassName.trim()) run(() => addClass(schoolId, { class_name: newClassName.trim(), academic_year: year }), 'Class added').then(() => setNewClassName('')); }} className="flex gap-2">
+          <input value={newClassName} onChange={e => setNewClassName(e.target.value)} className="input-field !w-56" placeholder="New class e.g. Grade 7" />
+          <button type="submit" className="btn-secondary">+ Add class</button>
+        </form>
+      </div>
 
-        {/* Learning areas */}
-        <div className="card p-5 lg:col-span-2">
-          <h3 className="font-semibold mb-3">Learning areas seeded ({learning_areas.length})</h3>
-          <div className="grid md:grid-cols-3 gap-2">
-            {[...new Set(learning_areas.map(a => a.level_name))].map(level => (
-              <div key={level} className="text-sm">
-                <div className="font-medium mb-1" style={{ color: '#7B4F9B' }}>{level}</div>
-                <div className="flex flex-wrap gap-1">
-                  {learning_areas.filter(a => a.level_name === level).map(a => (
-                    <span key={a.area_id} className="badge" style={{ backgroundColor: '#F4F0F6', color: '#5C3D76' }}>{a.area_name}</span>
-                  ))}
+      {/* Learning areas CRUD */}
+      <h2 className="font-semibold mb-1">Learning areas ({learning_areas.length})</h2>
+      <p className="text-sm mb-3" style={{ color: '#888' }}>
+        One set per class level (e.g. Grade 4). Add, rename, or delete areas and their sub-areas. Click a name to rename.
+      </p>
+      <div className="grid md:grid-cols-2 gap-4 mb-8">
+        {levels.map(level => (
+          <div key={level} className="card p-5">
+            <div className="flex items-center justify-between mb-2">
+              <div className="font-semibold" style={{ color: '#7B4F9B' }}>{level || 'General'}</div>
+              <span className="text-xs" style={{ color: '#999' }}>{learning_areas.filter(a => a.level_name === level).length} areas</span>
+            </div>
+            <div className="space-y-2 mb-3">
+              {learning_areas.filter(a => a.level_name === level).map(a => (
+                <div key={a.area_id} className="rounded-lg p-2" style={{ backgroundColor: '#F7F4F9' }}>
+                  <div className="flex items-center justify-between gap-2">
+                    <EditableName
+                      value={a.area_name}
+                      onSave={name => name.trim() && run(() => updateLearningArea(a.area_id, { area_name: name.trim() }), 'Area renamed')}
+                    />
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => setExpandedArea(expandedArea === a.area_id ? null : a.area_id)}
+                        className="btn-secondary !py-1 !px-2 text-xs"
+                      >
+                        {expandedArea === a.area_id ? 'Hide sub-areas' : `Sub-areas (${(subsByArea[a.area_id] || []).length})`}
+                      </button>
+                      <button onClick={() => run(() => deleteLearningArea(a.area_id), 'Area deleted')} className="btn-secondary !py-1 !px-2 text-xs" style={{ color: '#C62828' }}>×</button>
+                    </div>
+                  </div>
+                  {expandedArea === a.area_id && (
+                    <div className="mt-2 pl-2">
+                      <div className="flex flex-wrap gap-1 mb-2">
+                        {(subsByArea[a.area_id] || []).map(s => (
+                          <span key={s.sub_area_id} className="inline-flex items-center gap-1 badge" style={{ backgroundColor: '#fff', color: '#555', border: '1px solid #E6E0EB' }}>
+                            <EditableName value={s.sub_area_name} onSave={name => name.trim() && run(() => updateSubArea(s.sub_area_id, { sub_area_name: name.trim() }), 'Sub-area renamed')} />
+                            <button onClick={() => run(() => deleteSubArea(s.sub_area_id), 'Sub-area deleted')} className="text-xs font-bold" style={{ color: '#C62828' }}>×</button>
+                          </span>
+                        ))}
+                        {!subsByArea[a.area_id]?.length && <span className="text-xs" style={{ color: '#999' }}>No sub-areas yet</span>}
+                      </div>
+                      <form onSubmit={e => { e.preventDefault(); if ((newSubArea[a.area_id] || '').trim()) run(() => addSubArea({ area_id: a.area_id, sub_area_name: newSubArea[a.area_id].trim() }), 'Sub-area added').then(() => setNewSubArea({ ...newSubArea, [a.area_id]: '' })); }} className="flex gap-2">
+                        <input value={newSubArea[a.area_id] || ''} onChange={e => setNewSubArea({ ...newSubArea, [a.area_id]: e.target.value })} className="input-field !py-1 !w-48" placeholder="New sub-area" />
+                        <button type="submit" className="btn-secondary !py-1 !px-2 text-xs">+ Add</button>
+                      </form>
+                    </div>
+                  )}
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
+            <form onSubmit={e => { e.preventDefault(); if ((newAreas[level] || '').trim()) run(() => addLearningArea(schoolId, { level_name: level, area_name: newAreas[level].trim() }), 'Area added').then(() => setNewAreas({ ...newAreas, [level]: '' })); }} className="flex gap-2">
+              <input value={newAreas[level] || ''} onChange={e => setNewAreas({ ...newAreas, [level]: e.target.value })} className="input-field !py-1.5 !w-56" placeholder={`New area for ${level}`} />
+              <button type="submit" className="btn-secondary">+ Add area</button>
+            </form>
           </div>
+        ))}
+        {levels.length === 0 && <p style={{ color: '#999' }}>No learning areas yet — add some above.</p>}
+      </div>
+
+      {/* Teachers CRUD */}
+      <div className="card p-5 mb-8">
+        <h3 className="font-semibold mb-3">Teachers ({teachers.length})</h3>
+        <div className="table-wrap mb-4">
+          <table className="data-table">
+            <thead>
+              <tr><th>Teacher</th><th>Phone</th><th>Email</th><th>Role</th><th></th></tr>
+            </thead>
+            <tbody>
+              {teachers.map(t => (
+                <tr key={t.teacher_id}>
+                  <td className="font-medium">
+                    {editingTeacher === t.teacher_id ? (
+                      <input value={editingTeacher.full_name} onChange={e => setEditingTeacher({ ...editingTeacher, full_name: e.target.value })} className="input-field !py-1" />
+                    ) : (
+                      <button onClick={() => setEditingTeacher({ teacher_id: t.teacher_id, full_name: t.full_name, phone: t.phone || '', email: t.email || '', role: t.role || 'teacher' })} className="hover:underline">
+                        {t.full_name}
+                      </button>
+                    )}
+                  </td>
+                  <td>
+                    {editingTeacher === t.teacher_id
+                      ? <input value={editingTeacher.phone} onChange={e => setEditingTeacher({ ...editingTeacher, phone: e.target.value })} className="input-field !py-1" />
+                      : <span className="font-mono text-xs">{t.phone}</span>}
+                  </td>
+                  <td>
+                    {editingTeacher === t.teacher_id
+                      ? <input value={editingTeacher.email} onChange={e => setEditingTeacher({ ...editingTeacher, email: e.target.value })} className="input-field !py-1" />
+                      : <span className="text-xs">{t.email || '—'}</span>}
+                  </td>
+                  <td>
+                    {editingTeacher === t.teacher_id
+                      ? <select value={editingTeacher.role} onChange={e => setEditingTeacher({ ...editingTeacher, role: e.target.value })} className="input-field !py-1">
+                          <option value="teacher">teacher</option>
+                          <option value="head">head</option>
+                        </select>
+                      : <span className="badge" style={{ backgroundColor: '#F4F0F6', color: '#5C3D76' }}>{t.role}</span>}
+                  </td>
+                  <td className="text-right whitespace-nowrap">
+                    {editingTeacher === t.teacher_id ? (
+                      <>
+                        <button
+                          onClick={() => run(() => updateTeacher(t.teacher_id, { full_name: editingTeacher.full_name, phone: editingTeacher.phone, email: editingTeacher.email, role: editingTeacher.role }), 'Teacher updated').then(() => setEditingTeacher(null))}
+                          className="btn-primary !w-auto !px-3 !py-1 text-xs mr-1"
+                        >Save</button>
+                        <button onClick={() => setEditingTeacher(null)} className="btn-secondary !w-auto !px-3 !py-1 text-xs">Cancel</button>
+                      </>
+                    ) : (
+                      <button onClick={() => run(() => deleteTeacher(t.teacher_id), 'Teacher removed')} className="btn-secondary !w-auto !px-3 !py-1 text-xs" style={{ color: '#C62828' }}>Remove</button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+              {teachers.length === 0 && <tr><td colSpan="5" className="text-center py-6" style={{ color: '#999' }}>No teachers yet.</td></tr>}
+            </tbody>
+          </table>
         </div>
+        <form
+          onSubmit={e => {
+            e.preventDefault();
+            if (newTeacher.full_name && newTeacher.phone) run(() => addTeacher(schoolId, newTeacher), 'Teacher added').then(() => setNewTeacher({ full_name: '', phone: '', email: '', role: 'teacher' }));
+          }}
+          className="flex flex-wrap gap-2 items-end"
+        >
+          <div><label className="block text-xs mb-1" style={{ color: '#555' }}>Name</label><input required value={newTeacher.full_name} onChange={e => setNewTeacher({ ...newTeacher, full_name: e.target.value })} className="input-field !py-2 !w-48" /></div>
+          <div><label className="block text-xs mb-1" style={{ color: '#555' }}>Phone</label><input required value={newTeacher.phone} onChange={e => setNewTeacher({ ...newTeacher, phone: e.target.value })} className="input-field !py-2 !w-44" placeholder="2547..." /></div>
+          <div><label className="block text-xs mb-1" style={{ color: '#555' }}>Email</label><input value={newTeacher.email} onChange={e => setNewTeacher({ ...newTeacher, email: e.target.value })} className="input-field !py-2 !w-48" /></div>
+          <div>
+            <label className="block text-xs mb-1" style={{ color: '#555' }}>Role</label>
+            <select value={newTeacher.role} onChange={e => setNewTeacher({ ...newTeacher, role: e.target.value })} className="input-field !py-2">
+              <option value="teacher">teacher</option>
+              <option value="head">head</option>
+            </select>
+          </div>
+          <button type="submit" className="btn-secondary">+ Add teacher</button>
+        </form>
       </div>
     </div>
   );
