@@ -48,20 +48,29 @@ export default function SchoolDetailPage() {
   // M-Pesa integration state
   const [mpesa, setMpesa] = useState(null);
   const [mpesaForm, setMpesaForm] = useState(null);   // editable copy
+  const [mpesaError, setMpesaError] = useState('');
   const [revealSecret, setRevealSecret] = useState({ mpesa_consumer_secret: false, mpesa_passkey: false });
   const [copiedKey, setCopiedKey] = useState('');
 
-  useEffect(() => {
-    getSchoolMpesa(schoolId)
-      .then(d => { setMpesa(d); setMpesaForm({
+  async function loadMpesa() {
+    setMpesaError('');
+    try {
+      const d = await getSchoolMpesa(schoolId);
+      setMpesa(d);
+      setMpesaForm({
         mpesa_environment: d.mpesa_environment || 'sandbox',
         mpesa_paybill: d.mpesa_paybill || '',
         mpesa_consumer_key: d.mpesa_consumer_key || '',
         mpesa_consumer_secret: d.mpesa_consumer_secret || '',
         mpesa_passkey: d.mpesa_passkey || ''
-      }); })
-      .catch(() => {});
-  }, [schoolId]);
+      });
+    } catch (err) {
+      setMpesa(err);
+      setMpesaError(err.response?.data?.error || 'Failed to load M-Pesa settings');
+    }
+  }
+
+  useEffect(() => { loadMpesa(); }, [schoolId]);
 
   const mpesaDirty = mpesa && mpesaForm && (
     ['mpesa_environment', 'mpesa_paybill', 'mpesa_consumer_key', 'mpesa_consumer_secret', 'mpesa_passkey']
@@ -74,15 +83,7 @@ export default function SchoolDetailPage() {
       if ((mpesaForm[f] || '') !== (f === 'mpesa_environment' ? (mpesa.mpesa_environment || 'sandbox') : (mpesa[f] || ''))) body[f] = mpesaForm[f];
     }
     await updateSchoolMpesa(schoolId, body);
-    const d = await getSchoolMpesa(schoolId);
-    setMpesa(d);
-    setMpesaForm({
-      mpesa_environment: d.mpesa_environment || 'sandbox',
-      mpesa_paybill: d.mpesa_paybill || '',
-      mpesa_consumer_key: d.mpesa_consumer_key || '',
-      mpesa_consumer_secret: d.mpesa_consumer_secret || '',
-      mpesa_passkey: d.mpesa_passkey || ''
-    });
+    await loadMpesa();
   }
 
   async function copyValue(key, value) {
@@ -236,7 +237,12 @@ export default function SchoolDetailPage() {
           Per-school Daraja credentials. Payments for this school are collected to its own paybill using these keys.
         </p>
 
-        {mpesa && mpesaForm ? (
+        {mpesaError ? (
+          <div className="p-3 rounded-lg text-sm flex items-center justify-between gap-3" style={{ backgroundColor: '#FFEBEE', color: '#C62828' }}>
+            <span>{mpesaError}</span>
+            <button onClick={loadMpesa} className="btn-secondary !py-1.5 !px-3 text-xs shrink-0">Retry</button>
+          </div>
+        ) : mpesa && mpesaForm ? (
           <>
             <div className="grid md:grid-cols-2 gap-4 mb-4">
               <div>
