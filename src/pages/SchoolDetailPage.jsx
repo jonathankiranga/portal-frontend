@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
   getSchoolDetails, deleteSchool,
+  getSchoolMpesa, updateSchoolMpesa,
   addClass, updateClass, deleteClass,
   addLearningArea, updateLearningArea, deleteLearningArea,
   addSubArea, updateSubArea, deleteSubArea,
@@ -43,6 +44,58 @@ export default function SchoolDetailPage() {
   const [newSubArea, setNewSubArea] = useState({});
   const [newTeacher, setNewTeacher] = useState({ full_name: '', phone: '', email: '', role: 'teacher' });
   const [editingTeacher, setEditingTeacher] = useState(null);
+
+  // M-Pesa integration state
+  const [mpesa, setMpesa] = useState(null);
+  const [mpesaForm, setMpesaForm] = useState(null);   // editable copy
+  const [revealSecret, setRevealSecret] = useState({ mpesa_consumer_secret: false, mpesa_passkey: false });
+  const [copiedKey, setCopiedKey] = useState('');
+
+  useEffect(() => {
+    getSchoolMpesa(schoolId)
+      .then(d => { setMpesa(d); setMpesaForm({
+        mpesa_environment: d.mpesa_environment || 'sandbox',
+        mpesa_paybill: d.mpesa_paybill || '',
+        mpesa_consumer_key: d.mpesa_consumer_key || '',
+        mpesa_consumer_secret: d.mpesa_consumer_secret || '',
+        mpesa_passkey: d.mpesa_passkey || ''
+      }); })
+      .catch(() => {});
+  }, [schoolId]);
+
+  const mpesaDirty = mpesa && mpesaForm && (
+    ['mpesa_environment', 'mpesa_paybill', 'mpesa_consumer_key', 'mpesa_consumer_secret', 'mpesa_passkey']
+      .some(f => (mpesaForm[f] || '') !== ((f === 'mpesa_environment' ? (mpesa.mpesa_environment || 'sandbox') : (mpesa[f] || ''))))
+  );
+
+  async function saveMpesa() {
+    const body = {};
+    for (const f of ['mpesa_environment', 'mpesa_paybill', 'mpesa_consumer_key', 'mpesa_consumer_secret', 'mpesa_passkey']) {
+      if ((mpesaForm[f] || '') !== (f === 'mpesa_environment' ? (mpesa.mpesa_environment || 'sandbox') : (mpesa[f] || ''))) body[f] = mpesaForm[f];
+    }
+    await updateSchoolMpesa(schoolId, body);
+    const d = await getSchoolMpesa(schoolId);
+    setMpesa(d);
+    setMpesaForm({
+      mpesa_environment: d.mpesa_environment || 'sandbox',
+      mpesa_paybill: d.mpesa_paybill || '',
+      mpesa_consumer_key: d.mpesa_consumer_key || '',
+      mpesa_consumer_secret: d.mpesa_consumer_secret || '',
+      mpesa_passkey: d.mpesa_passkey || ''
+    });
+  }
+
+  async function copyValue(key, value) {
+    try {
+      await navigator.clipboard.writeText(value);
+    } catch {
+      const ta = document.createElement('textarea');
+      ta.value = value; document.body.appendChild(ta); ta.select();
+      document.execCommand('copy'); document.body.removeChild(ta);
+    }
+    setCopiedKey(key);
+    setTimeout(() => setCopiedKey(k => (k === key ? '' : k)), 1500);
+  }
 
   useEffect(() => { load(); }, [schoolId, year]);
 
@@ -162,6 +215,107 @@ export default function SchoolDetailPage() {
             </tbody>
           </table>
         </div>
+      </div>
+
+      {/* M-Pesa Integration */}
+      <div className="card p-5 mb-8">
+        <div className="flex items-center justify-between mb-1">
+          <h3 className="font-semibold">M-Pesa Integration</h3>
+          {mpesa && (
+            <span className="text-xs px-2 py-1 rounded-full" style={{
+              backgroundColor: mpesa.readiness.production_ready ? '#E8F5E9' : mpesa.readiness.complete ? '#FFF8E1' : '#FFEBEE',
+              color: mpesa.readiness.production_ready ? '#2E7D32' : mpesa.readiness.complete ? '#B26A00' : '#C62828'
+            }}>
+              {mpesa.readiness.production_ready ? '● Production ready'
+                : mpesa.readiness.complete ? '● Sandbox mode'
+                : `● Setup incomplete — missing: ${mpesa.readiness.missing.join(', ')}`}
+            </span>
+          )}
+        </div>
+        <p className="text-sm mb-4" style={{ color: '#888' }}>
+          Per-school Daraja credentials. Payments for this school are collected to its own paybill using these keys.
+        </p>
+
+        {mpesa && mpesaForm ? (
+          <>
+            <div className="grid md:grid-cols-2 gap-4 mb-4">
+              <div>
+                <label className="block text-sm font-medium mb-1" style={{ color: '#555' }}>Environment</label>
+                <select value={mpesaForm.mpesa_environment} onChange={e => setMpesaForm({ ...mpesaForm, mpesa_environment: e.target.value })} className="input-field">
+                  <option value="sandbox">Sandbox (test)</option>
+                  <option value="production">Production (live money)</option>
+                </select>
+                <p className="text-xs mt-1" style={{ color: '#999' }}>Switching to production affects live payment collection.</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1" style={{ color: '#555' }}>Paybill / Shortcode</label>
+                <input value={mpesaForm.mpesa_paybill} onChange={e => setMpesaForm({ ...mpesaForm, mpesa_paybill: e.target.value.replace(/[^0-9]/g, '') })} className="input-field font-mono" placeholder="e.g. 123456" />
+              </div>
+            </div>
+
+            {[
+              { key: 'mpesa_consumer_key', label: 'Consumer Key', secret: false },
+              { key: 'mpesa_consumer_secret', label: 'Consumer Secret', secret: true },
+              { key: 'mpesa_passkey', label: 'Passkey', secret: true }
+            ].map(f => (
+              <div key={f.key} className="mb-4">
+                <label className="block text-sm font-medium mb-1" style={{ color: '#555' }}>{f.label}</label>
+                <div className="flex gap-2">
+                  <input
+                    type={f.secret && !revealSecret[f.key] ? 'password' : 'text'}
+                    value={mpesaForm[f.key]}
+                    onChange={e => setMpesaForm({ ...mpesaForm, [f.key]: e.target.value })}
+                    className="input-field font-mono flex-1"
+                    autoComplete="off"
+                  />
+                  {f.secret && (
+                    <button type="button" onClick={() => setRevealSecret(s => ({ ...s, [f.key]: !s[f.key] }))} className="btn-secondary !px-3" title={revealSecret[f.key] ? 'Hide' : 'Show'}>
+                      {revealSecret[f.key] ? 'Hide' : 'Show'}
+                    </button>
+                  )}
+                  <button type="button" onClick={() => copyValue(f.key, mpesaForm[f.key])} disabled={!mpesaForm[f.key]} className="btn-secondary !px-3" title="Copy">
+                    {copiedKey === f.key ? 'Copied' : 'Copy'}
+                  </button>
+                </div>
+              </div>
+            ))}
+
+            <button
+              onClick={() => run(saveMpesa, 'M-Pesa settings saved')}
+              disabled={!mpesaDirty}
+              className={mpesaDirty ? 'btn-primary' : 'btn-secondary'}
+              style={mpesaDirty ? { backgroundColor: '#2E7D32', color: '#fff' } : {}}
+            >
+              {mpesaDirty ? 'Save changes' : 'Saved'}
+            </button>
+
+            <div className="mt-6 pt-4" style={{ borderTop: '1px solid #EEE' }}>
+              <h4 className="font-semibold mb-1 text-sm">Callback & notification URLs</h4>
+              <p className="text-xs mb-3" style={{ color: '#888' }}>
+                Register the public URLs in the Safaricom Daraja portal for this paybill. The secret URLs are used internally by STK push — never share them.
+              </p>
+              {[
+                { group: 'public', title: 'Public — register in Daraja (C2B)', rows: [['validation', 'Validation URL'], ['confirmation', 'Confirmation URL'], ['stk', 'STK Push callback']] },
+                { group: 'secret', title: 'Secret — internal STK result callbacks', rows: [['validation', 'Validation (secret)'], ['confirmation', 'Confirmation (secret)'], ['stk', 'STK result (secret)']] }
+              ].map(g => (
+                <div key={g.group} className="mb-4">
+                  <div className="text-xs font-semibold mb-2" style={{ color: g.group === 'secret' ? '#C62828' : '#7B4F9B' }}>{g.title}</div>
+                  {g.rows.map(([k, label]) => (
+                    <div key={k} className="flex items-center gap-2 mb-1.5">
+                      <span className="text-xs w-40 shrink-0" style={{ color: '#888' }}>{label}</span>
+                      <code className="text-xs flex-1 truncate px-2 py-1 rounded font-mono" style={{ backgroundColor: '#F5F5F5', color: '#444' }}>{mpesa.urls[g.group][k]}</code>
+                      <button type="button" onClick={() => copyValue(`${g.group}.${k}`, mpesa.urls[g.group][k])} className="btn-secondary !px-2 !py-1 text-xs shrink-0">
+                        {copiedKey === `${g.group}.${k}` ? 'Copied' : 'Copy'}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
+          </>
+        ) : (
+          <div className="text-sm py-4" style={{ color: '#999' }}>Loading M-Pesa settings…</div>
+        )}
       </div>
 
       {/* Classes CRUD */}

@@ -47,6 +47,16 @@ export async function deleteSchool(schoolId) {
   return data;
 }
 
+export async function getSchoolMpesa(schoolId) {
+  const { data } = await api.get(`/admin/api/schools/${schoolId}/mpesa`, { timeout: 30000 });
+  return data;
+}
+
+export async function updateSchoolMpesa(schoolId, body) {
+  const { data } = await api.put(`/admin/api/schools/${schoolId}/mpesa`, body, { timeout: 30000 });
+  return data;
+}
+
 export async function getRevenue(year) {
   const { data } = await api.get('/admin/api/revenue', { params: { year } });
   return data;
