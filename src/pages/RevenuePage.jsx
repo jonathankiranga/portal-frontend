@@ -7,17 +7,18 @@ export default function RevenuePage() {
   const [premiumRep, setPremiumRep] = useState([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
+  const [year, setYear] = useState(new Date().getFullYear());
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [year]);
 
-  async function load() {
+async function load() {
     setLoading(true);
     setError('');
     try {
       const [r, rep, prem] = await Promise.all([
-        getRevenue(),
-        getRevenueBySalesRep(),
-        getPremiumRevenueByRep()
+        getRevenue(year),
+        getRevenueBySalesRep(year),
+        getPremiumRevenueByRep(year)
       ]);
       setData(r);
       setByRep(rep.sales_rep_revenue || []);
@@ -32,8 +33,17 @@ export default function RevenuePage() {
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-6">
-      <h1 className="text-xl font-bold mb-1">Premium Revenue</h1>
-      <p className="text-sm mb-6" style={{ color: '#888' }}>Premium subscription revenue across schools — school fees are handled by the headteacher and bursar, not here</p>
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h1 className="text-xl font-bold mb-1">Premium Revenue</h1>
+          <p className="text-sm mb-6" style={{ color: '#888' }}>Premium subscription revenue across schools — school fees are handled by the headteacher and bursar, not here</p>
+        </div>
+        <div className="flex items-center gap-4">
+          <select value={year} onChange={e => setYear(parseInt(e.target.value))} className="input-field !w-32 !py-2">
+            {[2025, 2026, 2027].map(y => <option key={y} value={y}>{y}</option>)}
+          </select>
+        </div>
+      </div>
 
       {error && <div className="mb-4 p-3 rounded-lg text-sm" style={{ backgroundColor: '#FFEBEE', color: '#C62828' }}>{error}</div>}
 

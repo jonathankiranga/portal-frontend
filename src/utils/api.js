@@ -47,18 +47,18 @@ export async function deleteSchool(schoolId) {
   return data;
 }
 
-export async function getRevenue() {
-  const { data } = await api.get('/admin/api/revenue');
+export async function getRevenue(year) {
+  const { data } = await api.get('/admin/api/revenue', { params: { year } });
   return data;
 }
 
-export async function getRevenueBySalesRep() {
-  const { data } = await api.get('/admin/api/revenue/sales-reps');
+export async function getRevenueBySalesRep(year) {
+  const { data } = await api.get('/admin/api/revenue/sales-reps', { params: { year } });
   return data;
 }
 
-export async function getPremiumRevenueByRep() {
-  const { data } = await api.get('/admin/api/revenue/premium-by-sales-rep');
+export async function getPremiumRevenueByRep(year) {
+  const { data } = await api.get('/admin/api/revenue/premium-by-sales-rep', { params: { year } });
   return data;
 }
 
