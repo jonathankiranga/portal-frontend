@@ -23,6 +23,7 @@ export default function DashboardPage() {
 
   const cards = stats ? [
     { label: 'Schools', value: stats.schools, to: '/schools' },
+    { label: 'Sales Reps', value: stats.sales_reps || 0, to: '/sales-reps' },
     { label: 'Premium parents', value: stats.premium_parents, to: '/revenue' },
     { label: 'Premium subs', value: stats.premium_subscriptions, to: '/revenue' },
     { label: 'Premium revenue (KSh)', value: Number(stats.revenue || 0).toLocaleString(), to: '/revenue' },
@@ -44,7 +45,7 @@ export default function DashboardPage() {
 
       {loading && <p className="text-center py-12" style={{ color: '#888' }}>Loading…</p>}
 
-      {!loading && stats && (
+{!loading && stats && (
         <>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
             {cards.map(c => (
