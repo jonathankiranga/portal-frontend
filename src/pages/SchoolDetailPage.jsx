@@ -66,7 +66,12 @@ export default function SchoolDetailPage() {
       });
     } catch (err) {
       setMpesa(null);
-      setMpesaError(err.response?.data?.error || 'Failed to load M-Pesa settings');
+      const detail = err.response?.data?.error
+        || (err.response ? `Server error ${err.response.status}` : null)
+        || (err.code === 'ECONNABORTED' ? 'Request timed out' : null)
+        || err.message
+        || 'Failed to load M-Pesa settings';
+      setMpesaError(detail);
     }
   }
 
