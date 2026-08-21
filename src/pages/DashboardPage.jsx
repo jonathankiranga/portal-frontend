@@ -24,9 +24,9 @@ export default function DashboardPage() {
   const cards = stats ? [
     { label: 'Schools', value: stats.schools, to: '/schools' },
     { label: 'Sales Reps', value: stats.sales_reps || 0, to: '/sales-reps' },
-    { label: 'Premium parents', value: stats.premium_parents, to: '/revenue' },
+    { label: 'parents', value: stats.premium_parents, to: '/revenue' },
     { label: 'subscriptions', value: stats.premium_subscriptions, to: '/revenue' },
-    { label: 'Premium revenue (KSh)', value: Number(stats.revenue || 0).toLocaleString(), to: '/revenue' },
+    { label: 'revenue (KSh)', value: Number(stats.revenue || 0).toLocaleString(), to: '/revenue' },
   ] : [];
 
   return (

@@ -36,7 +36,7 @@ async function load() {
       <div className="flex items-center justify-between mb-4">
         <div>
           <h1 className="text-xl font-bold mb-1">Premium Revenue</h1>
-          <p className="text-sm mb-6" style={{ color: '#888' }}>Premium subscription revenue across schools — school fees are handled by the headteacher and bursar, not here</p>
+          <p className="text-sm mb-6" style={{ color: '#888' }}>subscription revenue across schools — school fees are handled by the headteacher and bursar, not here</p>
         </div>
         <div className="flex items-center gap-4">
           <select value={year} onChange={e => setYear(parseInt(e.target.value))} className="input-field !w-32 !py-2">
@@ -50,7 +50,7 @@ async function load() {
       {data && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           <div className="card p-5">
-            <div className="text-sm mb-1" style={{ color: '#888' }}>Premium revenue</div>
+            <div className="text-sm mb-1" style={{ color: '#888' }}>revenue</div>
             <div className="text-2xl font-bold" style={{ color: '#7B4F9B' }}>KSh {Number(data.totals.amount || 0).toLocaleString()}</div>
           </div>
           <div className="card p-5">
@@ -58,7 +58,7 @@ async function load() {
             <div className="text-2xl font-bold">{data.totals.transactions || 0}</div>
           </div>
           <div className="card p-5">
-            <div className="text-sm mb-1" style={{ color: '#888' }}>Premium parents</div>
+            <div className="text-sm mb-1" style={{ color: '#888' }}>parents</div>
             <div className="text-2xl font-bold" style={{ color: '#7B4F9B' }}>{data.premiumParents || 0}</div>
           </div>
           <div className="card p-5">
@@ -116,7 +116,7 @@ async function load() {
 
       {byRep.length > 0 && (
         <div className="card p-5 mb-8">
-          <h3 className="font-semibold mb-3">Premium revenue by sales representative</h3>
+          <h3 className="font-semibold mb-3">revenue by sales representative</h3>
           <div className="table-wrap">
             <table className="data-table">
               <thead>
@@ -140,7 +140,7 @@ async function load() {
 
       {premiumRep.length > 0 && (
         <div className="card p-5">
-          <h3 className="font-semibold mb-3">Premium subscriptions by rep & school</h3>
+          <h3 className="font-semibold mb-3">subscriptions by rep & school</h3>
           <div className="space-y-4">
             {premiumRep.map(r => (
               <div key={r.rep_id}>
