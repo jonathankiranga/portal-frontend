@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { setupSchool } from '../utils/api.js';
 
-const DEFAULT_CLASSES = ['PP1', 'PP2', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6'];
+const DEFAULT_CLASSES = ['PP1', 'PP2', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9'];
 
 export default function SetupSchoolPage() {
   const navigate = useNavigate();
@@ -17,7 +17,8 @@ export default function SetupSchoolPage() {
     headteacher_email: '',
     academic_year: new Date().getFullYear(),
     premium_payment_model: 'parent',
-    class_names: DEFAULT_CLASSES.join(', ')
+    class_names: DEFAULT_CLASSES.join(', '),
+    streams: ''
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -36,7 +37,8 @@ export default function SetupSchoolPage() {
       const body = {
         ...form,
         academic_year: parseInt(form.academic_year),
-        class_names: form.class_names.split(',').map(s => s.trim()).filter(Boolean)
+        class_names: form.class_names.split(',').map(s => s.trim()).filter(Boolean),
+        streams: form.streams.split(',').map(s => s.trim()).filter(Boolean)
       };
       const data = await setupSchool(body);
       setResult(data);
@@ -136,6 +138,11 @@ export default function SetupSchoolPage() {
                 <label className="block text-sm font-medium mb-1" style={{ color: '#555' }}>Classes (comma separated)</label>
                 <input value={form.class_names} onChange={set('class_names')} className="input-field" />
                 <p className="text-xs mt-1" style={{ color: '#999' }}>Learning areas are auto-seeded per class level.</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1" style={{ color: '#555' }}>Streams (optional, comma separated)</label>
+                <input value={form.streams} onChange={set('streams')} className="input-field" placeholder="e.g. East, West" />
+                <p className="text-xs mt-1" style={{ color: '#999' }}>Leave empty for one class per level. When set, creates a class per level × stream.</p>
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1" style={{ color: '#555' }}>Premium payment model</label>
