@@ -27,8 +27,6 @@ export default function DashboardPage() {
     { label: 'Premium parents', value: stats.premium_parents, to: '/revenue' },
     { label: 'Premium subs', value: stats.premium_subscriptions, to: '/revenue' },
     { label: 'Premium revenue (KSh)', value: Number(stats.revenue || 0).toLocaleString(), to: '/revenue' },
-    { label: 'Students', value: stats.students, to: '/schools' },
-    { label: 'Teachers', value: stats.teachers, to: '/schools' },
   ] : [];
 
   return (
