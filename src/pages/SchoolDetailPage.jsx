@@ -65,7 +65,7 @@ export default function SchoolDetailPage() {
         mpesa_passkey: d.mpesa_passkey || ''
       });
     } catch (err) {
-      setMpesa(err);
+      setMpesa(null);
       setMpesaError(err.response?.data?.error || 'Failed to load M-Pesa settings');
     }
   }
@@ -222,7 +222,7 @@ export default function SchoolDetailPage() {
       <div className="card p-5 mb-8">
         <div className="flex items-center justify-between mb-1">
           <h3 className="font-semibold">M-Pesa Integration</h3>
-          {mpesa && (
+          {mpesa?.readiness && (
             <span className="text-xs px-2 py-1 rounded-full" style={{
               backgroundColor: mpesa.readiness.production_ready ? '#E8F5E9' : mpesa.readiness.complete ? '#FFF8E1' : '#FFEBEE',
               color: mpesa.readiness.production_ready ? '#2E7D32' : mpesa.readiness.complete ? '#B26A00' : '#C62828'
