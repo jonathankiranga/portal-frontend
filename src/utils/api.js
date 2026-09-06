@@ -165,19 +165,25 @@ export async function deleteSubArea(subId) {
   return data;
 }
 
+// Seed structural data for an existing school
+export async function seedSchoolStructure(schoolId, year) {
+  const { data } = await api.post(`/admin/api/schools/${schoolId}/seed-structure`, { year }, { timeout: 120000 });
+  return data;
+}
+
 // Teachers
 export async function addTeacher(schoolId, body) {
-  const { data } = await api.post(`/admin/api/teachers`, { ...body, school_id: schoolId }, { timeout: 30000 });
+  const { data } = await api.post(`/admin/api/teachers`, { ...body, school_id: schoolId }, { timeout: 60000 });
   return data;
 }
 
 export async function updateTeacher(teacherId, body) {
-  const { data } = await api.put(`/admin/api/teachers/${teacherId}`, body, { timeout: 30000 });
+  const { data } = await api.put(`/admin/api/teachers/${teacherId}`, body, { timeout: 60000 });
   return data;
 }
 
 export async function deleteTeacher(teacherId) {
-  const { data } = await api.delete(`/admin/api/teachers/${teacherId}`, { timeout: 30000 });
+  const { data } = await api.delete(`/admin/api/teachers/${teacherId}`, { timeout: 60000 });
   return data;
 }
 

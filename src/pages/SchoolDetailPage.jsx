@@ -6,7 +6,8 @@ import {
   addClass, updateClass, deleteClass,
   addLearningArea, updateLearningArea, deleteLearningArea,
   addSubArea, updateSubArea, deleteSubArea,
-  addTeacher, updateTeacher, deleteTeacher
+  addTeacher, updateTeacher, deleteTeacher,
+  seedSchoolStructure
 } from '../utils/api.js';
 
 function EditableName({ value, onSave, onCancel, placeholder }) {
@@ -37,8 +38,11 @@ export default function SchoolDetailPage() {
   const [flash, setFlash] = useState('');
   const [loading, setLoading] = useState(true);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [seedYear, setSeedYear] = useState(new Date().getFullYear());
+  const [seeding, setSeeding] = useState(false);
+  const [seedResult, setSeedResult] = useState(null);
+  const [seedError, setSeedError] = useState('');
 
-  const [newClassName, setNewClassName] = useState('');
   const [newAreas, setNewAreas] = useState({});
   const [expandedArea, setExpandedArea] = useState(null);
   const [newSubArea, setNewSubArea] = useState({});
@@ -125,7 +129,12 @@ export default function SchoolDetailPage() {
       setFlash(successMsg);
       await load();
     } catch (err) {
-      setError(err.response?.data?.error || 'Action failed');
+      const msg = err.response?.data?.error
+        || (err.response ? `Server error ${err.response.status}: ${err.response.statusText}` : null)
+        || err.message
+        || 'Action failed';
+      setError(msg);
+      console.error('[Admin action failed]', err.response?.status, err.response?.data, err.message);
     }
   }
 
@@ -138,6 +147,20 @@ export default function SchoolDetailPage() {
       setError(err.response?.data?.error || 'Failed to delete school');
       setConfirmDelete(false);
     }
+  }
+
+  async function handleSeedStructure() {
+    setSeeding(true);
+    setSeedResult(null);
+    setSeedError('');
+    try {
+      const result = await seedSchoolStructure(schoolId, seedYear);
+      setSeedResult(result);
+      await load();
+    } catch (err) {
+      setSeedError(err.response?.data?.error || 'Seed failed');
+    }
+    setSeeding(false);
   }
 
   if (loading) return <div className="text-center py-16" style={{ color: '#888' }}>Loading…</div>;
@@ -177,6 +200,90 @@ export default function SchoolDetailPage() {
         <select value={year} onChange={e => setYear(parseInt(e.target.value))} className="input-field !w-36 !py-2">
           {[2026, 2027, 2025].map(y => <option key={y} value={y}>{y}</option>)}
         </select>
+      </div>
+
+      {/* ── Seed Structure ────────────────────────────────────────────── */}
+      <div className="card p-5 mb-8" style={{ borderLeft: '4px solid #7B4F9B' }}>
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <h3 className="font-semibold mb-1">🌱 Seed Basic Structure</h3>
+            <p className="text-sm mb-3" style={{ color: '#666' }}>
+              Populates <strong>CBC subjects &amp; sub-learning areas</strong> (per class level),
+              school terms, performance rubric, default fee structures, and CAT exam sessions —
+              all based on the classes already added to this school.
+              Safe to re-run: existing items are skipped, nothing is overwritten.
+              Students, teachers and headteacher are <em>not</em> affected.
+            </p>
+
+            {/* What gets seeded — visual checklist */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-4">
+              {[
+                ['📚', 'Subjects per grade',      'PP1–PP9 CBC curriculum'],
+                ['🔬', 'Sub-learning areas',       'CAT score columns per subject'],
+                ['📅', 'School terms',             'Term 1–3 dates for the year'],
+                ['🏆', 'Performance rubric',       'EE / ME / AE / BE levels'],
+                ['💰', 'Fee structures',           'Tuition + Activity + Lunch'],
+                ['🗂️', 'CAT sessions',             'CAT 1, CAT 2, End Term × 3 terms'],
+              ].map(([icon, title, desc]) => (
+                <div key={title} className="flex items-start gap-2 p-3 rounded-lg" style={{ backgroundColor: '#F7F4F9' }}>
+                  <span style={{ fontSize: 18, flexShrink: 0 }}>{icon}</span>
+                  <div>
+                    <div className="text-xs font-semibold" style={{ color: '#333' }}>{title}</div>
+                    <div className="text-xs" style={{ color: '#888' }}>{desc}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-end gap-3">
+          <div>
+            <label className="block text-xs font-medium mb-1" style={{ color: '#555' }}>Academic year to seed</label>
+            <select value={seedYear} onChange={e => setSeedYear(parseInt(e.target.value))} className="input-field !w-36 !py-2">
+              {[new Date().getFullYear(), new Date().getFullYear() + 1, new Date().getFullYear() - 1].map(y => (
+                <option key={y} value={y}>{y}</option>
+              ))}
+            </select>
+          </div>
+          <button
+            onClick={handleSeedStructure}
+            disabled={seeding}
+            className="btn-primary !w-auto px-6"
+            style={{ backgroundColor: '#7B4F9B' }}
+          >
+            {seeding ? 'Seeding…' : '🌱 Seed Structure'}
+          </button>
+        </div>
+
+        {seedError && (
+          <div className="mt-3 p-3 rounded-lg text-sm" style={{ backgroundColor: '#FFEBEE', color: '#C62828' }}>
+            {seedError}
+          </div>
+        )}
+
+        {seedResult && (
+          <div className="mt-3 p-4 rounded-lg text-sm" style={{ backgroundColor: '#E8F5E9', color: '#1B5E20' }}>
+            <p className="font-semibold mb-2">✓ Seeded {seedResult.school_name} for {seedResult.year}</p>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {[
+                ['Subjects added',    seedResult.summary.learning_areas.areas_added],
+                ['Sub-areas added',   seedResult.summary.learning_areas.subs_added],
+                ['Subjects skipped',  seedResult.summary.learning_areas.skipped],
+                ['Terms added',       seedResult.summary.terms.terms_added],
+                ['Rubric added',      seedResult.summary.rubric.rubric_added],
+                ['Fees added',        seedResult.summary.fee_structures.fees_added],
+                ['Sessions added',    seedResult.summary.exam_sessions.sessions_added],
+                ['Sessions skipped',  seedResult.summary.exam_sessions.skipped],
+              ].map(([label, val]) => (
+                <div key={label} className="flex items-center justify-between px-2 py-1 rounded" style={{ backgroundColor: 'rgba(255,255,255,0.6)' }}>
+                  <span style={{ color: '#444' }}>{label}</span>
+                  <strong>{val}</strong>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Who paid premium */}
@@ -344,8 +451,29 @@ export default function SchoolDetailPage() {
           ))}
           {classes.length === 0 && <span style={{ color: '#999' }}>No classes</span>}
         </div>
-        <form onSubmit={e => { e.preventDefault(); if (newClassName.trim()) run(() => addClass(schoolId, { class_name: newClassName.trim(), academic_year: year }), 'Class added').then(() => setNewClassName('')); }} className="flex gap-2">
-          <input value={newClassName} onChange={e => setNewClassName(e.target.value)} className="input-field !w-56" placeholder="New class e.g. Grade 7" />
+        <form onSubmit={e => {
+          e.preventDefault();
+          const fd = new FormData(e.target);
+          const className = fd.get('class_name').trim();
+          const levelName = fd.get('level_name').trim();
+          if (className) run(() => addClass(schoolId, {
+            class_name: className,
+            level_name: levelName || className,
+            academic_year: year
+          }), 'Class added').then(() => e.target.reset());
+        }} className="flex flex-wrap gap-2 items-end">
+          <div>
+            <label className="block text-xs font-medium mb-1" style={{ color: '#555' }}>Class name</label>
+            <input name="class_name" className="input-field !w-44" placeholder="e.g. Grade 7 East" required />
+          </div>
+          <div>
+            <label className="block text-xs font-medium mb-1" style={{ color: '#555' }}>Grade level</label>
+            <select name="level_name" className="input-field !w-36">
+              {['PP1','PP2','Grade 1','Grade 2','Grade 3','Grade 4','Grade 5','Grade 6','Grade 7','Grade 8','Grade 9'].map(l => (
+                <option key={l} value={l}>{l}</option>
+              ))}
+            </select>
+          </div>
           <button type="submit" className="btn-secondary">+ Add class</button>
         </form>
       </div>
@@ -419,50 +547,55 @@ export default function SchoolDetailPage() {
               <tr><th>Teacher</th><th>Phone</th><th>Email</th><th>Role</th><th></th></tr>
             </thead>
             <tbody>
-              {teachers.map(t => (
-                <tr key={t.teacher_id}>
-                  <td className="font-medium">
-                    {editingTeacher === t.teacher_id ? (
-                      <input value={editingTeacher.full_name} onChange={e => setEditingTeacher({ ...editingTeacher, full_name: e.target.value })} className="input-field !py-1" />
-                    ) : (
-                      <button onClick={() => setEditingTeacher({ teacher_id: t.teacher_id, full_name: t.full_name, phone: t.phone || '', email: t.email || '', role: t.role || 'teacher' })} className="hover:underline">
-                        {t.full_name}
-                      </button>
-                    )}
-                  </td>
-                  <td>
-                    {editingTeacher === t.teacher_id
-                      ? <input value={editingTeacher.phone} onChange={e => setEditingTeacher({ ...editingTeacher, phone: e.target.value })} className="input-field !py-1" />
-                      : <span className="font-mono text-xs">{t.phone}</span>}
-                  </td>
-                  <td>
-                    {editingTeacher === t.teacher_id
-                      ? <input value={editingTeacher.email} onChange={e => setEditingTeacher({ ...editingTeacher, email: e.target.value })} className="input-field !py-1" />
-                      : <span className="text-xs">{t.email || '—'}</span>}
-                  </td>
-                  <td>
-                    {editingTeacher === t.teacher_id
-                      ? <select value={editingTeacher.role} onChange={e => setEditingTeacher({ ...editingTeacher, role: e.target.value })} className="input-field !py-1">
-                          <option value="teacher">teacher</option>
-                          <option value="head">head</option>
-                        </select>
-                      : <span className="badge" style={{ backgroundColor: '#F4F0F6', color: '#5C3D76' }}>{t.role}</span>}
-                  </td>
-                  <td className="text-right whitespace-nowrap">
-                    {editingTeacher === t.teacher_id ? (
-                      <>
-                        <button
-                          onClick={() => run(() => updateTeacher(t.teacher_id, { full_name: editingTeacher.full_name, phone: editingTeacher.phone, email: editingTeacher.email, role: editingTeacher.role }), 'Teacher updated').then(() => setEditingTeacher(null))}
-                          className="btn-primary !w-auto !px-3 !py-1 text-xs mr-1"
-                        >Save</button>
-                        <button onClick={() => setEditingTeacher(null)} className="btn-secondary !w-auto !px-3 !py-1 text-xs">Cancel</button>
-                      </>
-                    ) : (
-                      <button onClick={() => run(() => deleteTeacher(t.teacher_id), 'Teacher removed')} className="btn-secondary !w-auto !px-3 !py-1 text-xs" style={{ color: '#C62828' }}>Remove</button>
-                    )}
-                  </td>
-                </tr>
-              ))}
+              {teachers.map(t => {
+                const isEditing = editingTeacher?.teacher_id === t.teacher_id;
+                return (
+                  <tr key={t.teacher_id}>
+                    <td className="font-medium">
+                      {isEditing
+                        ? <input value={editingTeacher.full_name} onChange={e => setEditingTeacher({ ...editingTeacher, full_name: e.target.value })} className="input-field !py-1" />
+                        : <button onClick={() => setEditingTeacher({ teacher_id: t.teacher_id, full_name: t.full_name, phone: t.phone || '', email: t.email || '', role: t.role || 'teacher' })} className="hover:underline">{t.full_name}</button>
+                      }
+                    </td>
+                    <td>
+                      {isEditing
+                        ? <input value={editingTeacher.phone} onChange={e => setEditingTeacher({ ...editingTeacher, phone: e.target.value })} className="input-field !py-1" placeholder="2547..." />
+                        : <span className="font-mono text-xs">{t.phone}</span>}
+                    </td>
+                    <td>
+                      {isEditing
+                        ? <input value={editingTeacher.email} onChange={e => setEditingTeacher({ ...editingTeacher, email: e.target.value })} className="input-field !py-1" />
+                        : <span className="text-xs">{t.email || '—'}</span>}
+                    </td>
+                    <td>
+                      {isEditing
+                        ? <select value={editingTeacher.role} onChange={e => setEditingTeacher({ ...editingTeacher, role: e.target.value })} className="input-field !py-1">
+                            <option value="teacher">teacher</option>
+                            <option value="head">head</option>
+                          </select>
+                        : <span className="badge" style={{ backgroundColor: '#F4F0F6', color: '#5C3D76' }}>{t.role}</span>}
+                    </td>
+                    <td className="text-right whitespace-nowrap">
+                      {isEditing ? (
+                        <>
+                          <button
+                            onClick={() => run(() => updateTeacher(editingTeacher.teacher_id, {
+                              full_name: editingTeacher.full_name,
+                              phone: editingTeacher.phone,
+                              email: editingTeacher.email,
+                              role: editingTeacher.role
+                            }), 'Teacher updated').then(() => setEditingTeacher(null))}
+                            className="btn-primary !w-auto !px-3 !py-1 text-xs mr-1"
+                          >Save</button>
+                          <button onClick={() => setEditingTeacher(null)} className="btn-secondary !w-auto !px-3 !py-1 text-xs">Cancel</button>
+                        </>
+                      ) : (
+                        <button onClick={() => run(() => deleteTeacher(t.teacher_id), 'Teacher removed')} className="btn-secondary !w-auto !px-3 !py-1 text-xs" style={{ color: '#C62828' }}>Remove</button>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
               {teachers.length === 0 && <tr><td colSpan="5" className="text-center py-6" style={{ color: '#999' }}>No teachers yet.</td></tr>}
             </tbody>
           </table>
@@ -470,21 +603,24 @@ export default function SchoolDetailPage() {
         <form
           onSubmit={e => {
             e.preventDefault();
-            if (newTeacher.full_name && newTeacher.phone) run(() => addTeacher(schoolId, newTeacher), 'Teacher added').then(() => setNewTeacher({ full_name: '', phone: '', email: '', role: 'teacher' }));
+            if (newTeacher.full_name && newTeacher.phone) {
+              run(() => addTeacher(schoolId, newTeacher), 'Teacher added')
+                .then(() => setNewTeacher({ full_name: '', phone: '', email: '', role: 'teacher' }));
+            }
           }}
           className="flex flex-wrap gap-2 items-end"
         >
-          <div><label className="block text-xs mb-1" style={{ color: '#555' }}>Name</label><input required value={newTeacher.full_name} onChange={e => setNewTeacher({ ...newTeacher, full_name: e.target.value })} className="input-field !py-2 !w-48" /></div>
-          <div><label className="block text-xs mb-1" style={{ color: '#555' }}>Phone</label><input required value={newTeacher.phone} onChange={e => setNewTeacher({ ...newTeacher, phone: e.target.value })} className="input-field !py-2 !w-44" placeholder="2547..." /></div>
+          <div><label className="block text-xs mb-1" style={{ color: '#555' }}>Name *</label><input required value={newTeacher.full_name} onChange={e => setNewTeacher({ ...newTeacher, full_name: e.target.value })} className="input-field !py-2 !w-48" /></div>
+          <div><label className="block text-xs mb-1" style={{ color: '#555' }}>Phone * (2547…)</label><input required value={newTeacher.phone} onChange={e => setNewTeacher({ ...newTeacher, phone: e.target.value })} className="input-field !py-2 !w-44" placeholder="254712345678" /></div>
           <div><label className="block text-xs mb-1" style={{ color: '#555' }}>Email</label><input value={newTeacher.email} onChange={e => setNewTeacher({ ...newTeacher, email: e.target.value })} className="input-field !py-2 !w-48" /></div>
           <div>
             <label className="block text-xs mb-1" style={{ color: '#555' }}>Role</label>
             <select value={newTeacher.role} onChange={e => setNewTeacher({ ...newTeacher, role: e.target.value })} className="input-field !py-2">
-              <option value="teacher">teacher</option>
-              <option value="head">head</option>
+              <option value="teacher">Teacher</option>
+              <option value="head">Headteacher</option>
             </select>
           </div>
-          <button type="submit" className="btn-secondary">+ Add teacher</button>
+          <button type="submit" className="btn-secondary">+ Add</button>
         </form>
       </div>
     </div>
