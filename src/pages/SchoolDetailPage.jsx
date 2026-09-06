@@ -125,8 +125,8 @@ export default function SchoolDetailPage() {
     setError('');
     setFlash('');
     try {
-      await fn();
-      setFlash(successMsg);
+      const result = await fn();
+      setFlash(typeof result === 'string' && result ? result : successMsg);
       await load();
     } catch (err) {
       const msg = err.response?.data?.error
@@ -604,7 +604,14 @@ export default function SchoolDetailPage() {
           onSubmit={e => {
             e.preventDefault();
             if (newTeacher.full_name && newTeacher.phone) {
-              run(() => addTeacher(schoolId, newTeacher), 'Teacher added')
+              run(async () => {
+                const r = await addTeacher(schoolId, newTeacher);
+                if (r?.converted) {
+                  const label = r.role === 'head' ? 'headteacher' : 'teacher';
+                  return `Existing contact assigned as ${label} (was ${r.previous_role})`;
+                }
+                return 'Teacher added';
+              }, 'Teacher added')
                 .then(() => setNewTeacher({ full_name: '', phone: '', email: '', role: 'teacher' }));
             }
           }}
