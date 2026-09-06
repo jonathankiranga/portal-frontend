@@ -604,14 +604,7 @@ export default function SchoolDetailPage() {
           onSubmit={e => {
             e.preventDefault();
             if (newTeacher.full_name && newTeacher.phone) {
-              run(async () => {
-                const r = await addTeacher(schoolId, newTeacher);
-                if (r?.converted) {
-                  const label = r.role === 'head' ? 'headteacher' : 'teacher';
-                  return `Existing contact assigned as ${label} (was ${r.previous_role})`;
-                }
-                return 'Teacher added';
-              }, 'Teacher added')
+              run(() => addTeacher(schoolId, newTeacher), 'Teacher added')
                 .then(() => setNewTeacher({ full_name: '', phone: '', email: '', role: 'teacher' }));
             }
           }}
