@@ -6,6 +6,7 @@ import SchoolsPage from './pages/SchoolsPage.jsx';
 import SchoolDetailPage from './pages/SchoolDetailPage.jsx';
 import SetupSchoolPage from './pages/SetupSchoolPage.jsx';
 import RevenuePage from './pages/RevenuePage.jsx';
+import PremiumPage from './pages/PremiumPage.jsx';
 import SalesRepsPage from './pages/SalesRepsPage.jsx';
 
 function isAuthed() {
@@ -49,6 +50,9 @@ function Layout() {
             <NavLink to="/revenue" className={({ isActive }) => `px-3 py-2 rounded-lg ${isActive ? 'font-semibold' : ''}`} style={({ isActive }) => isActive ? { color: '#7B4F9B', backgroundColor: '#F4F0F6' } : { color: '#555' }}>
               Revenue
             </NavLink>
+            <NavLink to="/premium" className={({ isActive }) => `px-3 py-2 rounded-lg ${isActive ? 'font-semibold' : ''}`} style={({ isActive }) => isActive ? { color: '#7B4F9B', backgroundColor: '#F4F0F6' } : { color: '#555' }}>
+              Premium
+            </NavLink>
             <NavLink to="/sales-reps" className={({ isActive }) => `px-3 py-2 rounded-lg ${isActive ? 'font-semibold' : ''}`} style={({ isActive }) => isActive ? { color: '#7B4F9B', backgroundColor: '#F4F0F6' } : { color: '#555' }}>
               Sales Reps
             </NavLink>
@@ -66,6 +70,7 @@ function Layout() {
           <Route path="/schools/setup" element={<RequireAuth><SetupSchoolPage /></RequireAuth>} />
           <Route path="/schools/:schoolId" element={<RequireAuth><SchoolDetailPage /></RequireAuth>} />
           <Route path="/revenue" element={<RequireAuth><RevenuePage /></RequireAuth>} />
+          <Route path="/premium" element={<RequireAuth><PremiumPage /></RequireAuth>} />
           <Route path="/sales-reps" element={<RequireAuth><SalesRepsPage /></RequireAuth>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

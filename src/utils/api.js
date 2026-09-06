@@ -187,4 +187,20 @@ export async function deleteTeacher(teacherId) {
   return data;
 }
 
+// Premium (per-school subscription management)
+export async function getSchoolPremium(schoolId) {
+  const { data } = await api.get(`/admin/api/schools/${schoolId}/premium`, { timeout: 30000 });
+  return data;
+}
+
+export async function updateSchoolPremiumSettings(schoolId, body) {
+  const { data } = await api.put(`/admin/api/schools/${schoolId}/premium-settings`, body, { timeout: 30000 });
+  return data;
+}
+
+export async function paySchoolPremium(schoolId, phone) {
+  const { data } = await api.post(`/admin/api/schools/${schoolId}/premium/pay`, { phone }, { timeout: 60000 });
+  return data;
+}
+
 export default api;
