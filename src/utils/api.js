@@ -1,4 +1,4 @@
-import axios from 'axios';
+﻿import axios from 'axios';
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'https://sms-backend-r0tn.onrender.com',
@@ -203,4 +203,54 @@ export async function paySchoolPremium(schoolId, phone) {
   return data;
 }
 
+
+// ── Commission Management ────────────────────────────────────
+
+export async function getCommissionTerms() {
+  const { data } = await api.get('/admin/api/commission/terms');
+  return data;
+}
+
+export async function calculateCommission(repId, term, year) {
+  const { data } = await api.get('/admin/api/commission/calculate', { params: { rep_id: repId, term, year } });
+  return data;
+}
+
+export async function getCommissionPayments(filters = {}) {
+  const { data } = await api.get('/admin/api/commission/payments', { params: filters });
+  return data;
+}
+
+export async function requestCommissionPayment(body) {
+  const { data } = await api.post('/admin/api/commission/payments', body, { timeout: 30000 });
+  return data;
+}
+
+export async function approveCommissionPayment(paymentId, body) {
+  const { data } = await api.put(`/admin/api/commission/payments/${paymentId}/approve`, body);
+  return data;
+}
+
+export async function rejectCommissionPayment(paymentId, body) {
+  const { data } = await api.put(`/admin/api/commission/payments/${paymentId}/reject`, body);
+  return data;
+}
+
+export async function markCommissionPaid(paymentId, body) {
+  const { data } = await api.put(`/admin/api/commission/payments/${paymentId}/mark-paid`, body);
+  return data;
+}
+
+export async function getCommissionAuditLog(filters = {}) {
+  const { data } = await api.get('/admin/api/commission/audit-log', { params: filters });
+  return data;
+}
+
+export async function getRevenueBySalesRepByTerm(term, year) {
+  const params = {};
+  if (term) params.term = term;
+  if (year) params.year = year;
+  const { data } = await api.get('/admin/api/revenue/sales-reps-by-term', { params });
+  return data;
+}
 export default api;

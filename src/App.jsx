@@ -8,6 +8,7 @@ import SetupSchoolPage from './pages/SetupSchoolPage.jsx';
 import RevenuePage from './pages/RevenuePage.jsx';
 import PremiumPage from './pages/PremiumPage.jsx';
 import SalesRepsPage from './pages/SalesRepsPage.jsx';
+import CommissionPage from './pages/CommissionPage.jsx';
 
 function isAuthed() {
   return Boolean(sessionStorage.getItem('admin_token'));
@@ -53,6 +54,9 @@ function Layout() {
             <NavLink to="/premium" className={({ isActive }) => `px-3 py-2 rounded-lg ${isActive ? 'font-semibold' : ''}`} style={({ isActive }) => isActive ? { color: '#7B4F9B', backgroundColor: '#F4F0F6' } : { color: '#555' }}>
               Premium
             </NavLink>
+            <NavLink to="/commission" className={({ isActive }) => `px-3 py-2 rounded-lg ${isActive ? 'font-semibold' : ''}` } style={({ isActive }) => isActive ? { color: '#7B4F9B', backgroundColor: '#F4F0F6' } : { color: '#555' }}>
+              Commissions
+            </NavLink>
             <NavLink to="/sales-reps" className={({ isActive }) => `px-3 py-2 rounded-lg ${isActive ? 'font-semibold' : ''}`} style={({ isActive }) => isActive ? { color: '#7B4F9B', backgroundColor: '#F4F0F6' } : { color: '#555' }}>
               Sales Reps
             </NavLink>
@@ -72,6 +76,7 @@ function Layout() {
           <Route path="/revenue" element={<RequireAuth><RevenuePage /></RequireAuth>} />
           <Route path="/premium" element={<RequireAuth><PremiumPage /></RequireAuth>} />
           <Route path="/sales-reps" element={<RequireAuth><SalesRepsPage /></RequireAuth>} />
+          <Route path="/commission" element={<RequireAuth><CommissionPage /></RequireAuth>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
