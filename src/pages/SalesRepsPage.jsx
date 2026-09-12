@@ -66,15 +66,13 @@ export default function SalesRepsPage() {
   }
 
   function commissionLabel(rep) {
-    if (rep.commission_type === 'flat') return `KSh ${Number(rep.commission_value || 0).toLocaleString()}/sub`;
-    return `${rep.commission_value || 0}%`;
+    return `${rep.commission_value || 0}% of revenue`;
   }
 
   function estimatedCommission(rep) {
     const revRow = rev.find(r => r.rep_id === rep.rep_id);
     const revenue = Number(revRow?.revenue || 0);
     const count = Number(revRow?.transactions || 0);
-    if (rep.commission_type === 'flat') return (rep.commission_value || 0) * count;
     return revenue * ((rep.commission_value || 0) / 100);
   }
 
@@ -104,14 +102,13 @@ export default function SalesRepsPage() {
             </div>
             <div>
               <label className="block text-sm font-medium mb-1" style={{ color: '#555' }}>Commission type</label>
-              <select value={form.commission_type} onChange={set('commission_type')} className="input-field">
+              <select value={form.commission_type} onChange={set('commission_type')} className="input-field" disabled>
                 <option value="percent">Percent of premium revenue</option>
-                <option value="flat">Flat per subscription</option>
               </select>
             </div>
             <div>
               <label className="block text-sm font-medium mb-1" style={{ color: '#555' }}>
-                {form.commission_type === 'flat' ? 'Amount per subscription (KSh)' : 'Percentage (%)'}
+                {'Percentage (%)'}
               </label>
               <input type="number" min="0" step="0.5" value={form.commission_value} onChange={set('commission_value')} className="input-field" />
             </div>

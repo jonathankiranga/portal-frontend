@@ -166,7 +166,7 @@ export default function CommissionPage() {
                   return (
                     <tr key={rep.rep_id}>
                       <td><div className="font-medium">{rep.full_name}</div><div className="text-xs font-mono" style={{ color: '#999' }}>{rep.rep_id}</div></td>
-                      <td><span className="badge" style={{ backgroundColor: '#F4F0F6', color: '#5C3D76' }}>{rep.commission_type === 'flat' ? 'KSh ' + Number(rep.commission_value).toLocaleString() + '/sub' : rep.commission_value + '%'}</span></td>
+                      <td><span className="badge" style={{ backgroundColor: '#F4F0F6', color: '#5C3D76' }}>{rep.commission_value}%</span></td>
                       <td>{rp.filter(p => p.payment_status === 'paid').length}</td>
                       <td className="font-medium" style={{ color: '#2E7D32' }}>KSh {paid.toLocaleString()}</td>
                       <td style={{ color: '#F57F17' }}>{pend > 0 ? 'KSh ' + pend.toLocaleString() : '-'}</td>
