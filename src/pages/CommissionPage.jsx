@@ -2,7 +2,7 @@
 import {
   getSalesReps, getCommissionPayments, requestCommissionPayment,
   approveCommissionPayment, rejectCommissionPayment, markCommissionPaid,
-  getCommissionAuditLog, calculateCommission,
+  getCommissionAuditLog, calculateCommission, getAllWallets, getRepWallet,
 } from '../utils/api.js';
 
 const SC = {
@@ -36,6 +36,9 @@ export default function CommissionPage() {
   const [actionNote, setActionNote]     = useState('');
   const [actionRef, setActionRef]       = useState('');
   const [actioning, setActioning]       = useState(false);
+  const [wallets, setWallets]           = useState([]);
+  const [walletDetail, setWalletDetail] = useState(null);
+  const [loadingWallet, setLoadingWallet] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true); setError('');
@@ -52,6 +55,8 @@ export default function CommissionPage() {
   useEffect(() => {
     if (tab === 'audit')
       getCommissionAuditLog({}).then(d => setAuditLog(d.audit_log || [])).catch(() => {});
+    if (tab === 'wallets')
+      getAllWallets().then(d => setWallets(d.wallets || [])).catch(() => {});
   }, [tab]);
 
   async function handlePreview(e) {
@@ -134,6 +139,7 @@ export default function CommissionPage() {
       <div className="flex gap-4 mb-6 border-b" style={{ borderColor: '#E0E0E0' }}>
         {[
           { key: 'overview', label: 'Overview' },
+          { key: 'wallets',  label: 'Wallets' },
           { key: 'request',  label: 'Request Payment' },
           { key: 'payments', label: 'Payments' + (pendingCount ? ' (' + pendingCount + ')' : '') },
           { key: 'audit',    label: 'Audit Log' },
@@ -280,6 +286,100 @@ export default function CommissionPage() {
               </tbody>
             </table>
           </div></div>
+        </div>
+      )}
+
+      {tab === 'wallets' && (
+        <div>
+          {walletDetail ? (
+            <div>
+              <button onClick={() => setWalletDetail(null)} className="btn-secondary mb-4">← Back to all wallets</button>
+              <div className="grid grid-cols-3 gap-4 mb-6">
+                {[
+                  { label: 'Balance',        value: 'KSh ' + Number(walletDetail.balance).toLocaleString(),         color: '#7B4F9B' },
+                  { label: 'Total credited', value: 'KSh ' + Number(walletDetail.total_credited).toLocaleString(),  color: '#2E7D32' },
+                  { label: 'Total withdrawn',value: 'KSh ' + Number(walletDetail.total_withdrawn).toLocaleString(), color: '#1565C0' },
+                ].map((c, i) => (
+                  <div key={i} className="card p-4">
+                    <div className="text-xs mb-1" style={{ color: '#888' }}>{c.label}</div>
+                    <div className="text-2xl font-bold" style={{ color: c.color }}>{c.value}</div>
+                  </div>
+                ))}
+              </div>
+              <div className="card overflow-hidden mb-4">
+                <div className="p-4 font-semibold border-b" style={{ borderColor: '#F0F0F0' }}>Transaction history</div>
+                <div className="table-wrap">
+                  <table className="data-table">
+                    <thead><tr><th>Date</th><th>Description</th><th>Type</th><th>Amount</th><th>Balance after</th></tr></thead>
+                    <tbody>
+                      {walletDetail.transactions?.map(t => (
+                        <tr key={t.txn_id}>
+                          <td className="text-xs" style={{ color: '#888' }}>{new Date(t.created_at).toLocaleDateString()}</td>
+                          <td className="text-sm">{t.description}</td>
+                          <td><span className="badge text-xs" style={{ backgroundColor: t.txn_type === 'credit' ? '#E8F5E9' : '#FFF8E1', color: t.txn_type === 'credit' ? '#2E7D32' : '#F57F17' }}>{t.txn_type}</span></td>
+                          <td className="font-medium" style={{ color: t.txn_type === 'credit' ? '#2E7D32' : '#C62828' }}>{t.txn_type === 'credit' ? '+' : '-'}KSh {Number(t.amount).toLocaleString()}</td>
+                          <td>KSh {Number(t.balance_after).toLocaleString()}</td>
+                        </tr>
+                      ))}
+                      {walletDetail.transactions?.length === 0 && <tr><td colSpan="5" className="text-center py-8" style={{ color: '#999' }}>No transactions yet.</td></tr>}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              <div className="card overflow-hidden">
+                <div className="p-4 font-semibold border-b" style={{ borderColor: '#F0F0F0' }}>Withdrawal history</div>
+                <div className="table-wrap">
+                  <table className="data-table">
+                    <thead><tr><th>Date</th><th>Amount</th><th>M-Pesa phone</th><th>Reference</th><th>Status</th></tr></thead>
+                    <tbody>
+                      {walletDetail.withdrawals?.map(w => {
+                        const sc = { pending: { bg:'#FFF8E1',color:'#F57F17' }, processing:{ bg:'#E8EAF6',color:'#283593' }, completed:{ bg:'#E3F2FD',color:'#1565C0' }, failed:{ bg:'#FCE4EC',color:'#880E4F' } };
+                        const s = sc[w.status] || sc.pending;
+                        return (
+                          <tr key={w.withdrawal_id}>
+                            <td className="text-xs" style={{ color:'#888' }}>{new Date(w.requested_at).toLocaleDateString()}</td>
+                            <td className="font-medium">KSh {Number(w.amount).toLocaleString()}</td>
+                            <td className="text-sm">{w.mpesa_phone}</td>
+                            <td className="text-xs font-mono">{w.mpesa_reference || '-'}</td>
+                            <td><span className="badge text-xs" style={{ backgroundColor:s.bg, color:s.color }}>{w.status}</span></td>
+                          </tr>
+                        );
+                      })}
+                      {walletDetail.withdrawals?.length === 0 && <tr><td colSpan="5" className="text-center py-8" style={{ color:'#999' }}>No withdrawals yet.</td></tr>}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="card overflow-hidden">
+              <div className="table-wrap">
+                <table className="data-table">
+                  <thead><tr><th>Rep</th><th>Balance</th><th>Total Earned</th><th>Total Withdrawn</th><th></th></tr></thead>
+                  <tbody>
+                    {wallets.map(w => (
+                      <tr key={w.rep_id}>
+                        <td><div className="font-medium">{w.full_name}</div><div className="text-xs" style={{ color:'#999' }}>{w.phone || w.rep_id}</div></td>
+                        <td className="font-bold" style={{ color: Number(w.balance) > 0 ? '#7B4F9B' : '#999' }}>KSh {Number(w.balance).toLocaleString()}</td>
+                        <td style={{ color: '#2E7D32' }}>KSh {Number(w.total_credited).toLocaleString()}</td>
+                        <td style={{ color: '#1565C0' }}>KSh {Number(w.total_withdrawn).toLocaleString()}</td>
+                        <td>
+                          <button className="btn-secondary !py-1 !px-3 text-xs" onClick={async () => {
+                            setLoadingWallet(true);
+                            try { const d = await getRepWallet(w.rep_id); setWalletDetail(d); } catch {}
+                            setLoadingWallet(false);
+                          }}>
+                            {loadingWallet ? '...' : 'View'}
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                    {wallets.length === 0 && <tr><td colSpan="5" className="text-center py-8" style={{ color:'#999' }}>No wallets found.</td></tr>}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

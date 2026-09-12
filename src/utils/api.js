@@ -253,4 +253,15 @@ export async function getRevenueBySalesRepByTerm(term, year) {
   const { data } = await api.get('/admin/api/revenue/sales-reps-by-term', { params });
   return data;
 }
+// ── Wallet ────────────────────────────────────────────────────
+export async function getAllWallets() {
+  const { data } = await api.get('/admin/api/wallets');
+  return data;
+}
+
+export async function getRepWallet(repId) {
+  const { data } = await api.get(`/admin/api/wallets/${repId}`);
+  return data;
+}
+
 export default api;
